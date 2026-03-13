@@ -272,9 +272,15 @@ void PyNuaireFan::build_tx_packet_(uint8_t *pkt) {
   if (send_level == 0) send_level = this->default_level_;
 
   if (this->synced_ && this->sync_count_ >= 3) {
-    // Step one level at a time toward target
-    if (send_level < this->target_level_)      send_level = send_level + 1;
-    else if (send_level > this->target_level_) send_level = send_level - 1;
+    // Only step if the motor acknowledged our last sent level.
+    // If current_level_ != last_sent_level_, the motor is ignoring us —
+    // echo current_level_ until it agrees, then start stepping.
+    if (this->last_sent_level_ == 0 || this->current_level_ == this->last_sent_level_) {
+      // Step one level at a time toward target
+      if (send_level < this->target_level_)      send_level = send_level + 1;
+      else if (send_level > this->target_level_) send_level = send_level - 1;
+    }
+    // else: echo current_level_ (motor hasn't accepted last step yet)
   }
 
   // B18=0x02 on *first* packet with a new level
