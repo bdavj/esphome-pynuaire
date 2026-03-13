@@ -1,0 +1,44 @@
+substitutions:
+  device_name: drimaster
+
+esphome:
+  name: ${device_name}
+
+esp32:
+  board: esp32dev
+
+# ----------------------------------------------------------------
+# UART wired to the Nuaire Drimaster's internal UART bus.
+# The signal is INVERTED — set inverted: true on both pins.
+# Connect TX→RX and RX→TX between the ESP32 and the fan's
+# controller board header.
+# ----------------------------------------------------------------
+uart:
+  tx_pin:
+    number: GPIO17
+    inverted: true
+  rx_pin:
+    number: GPIO16
+    inverted: true
+  baud_rate: 57600
+  id: nuaire_uart
+
+external_components:
+  - source: github://bdavj/esphome-pynuaire
+    components: [pynuaire]
+
+fan:
+  - platform: pynuaire
+    uart_id: nuaire_uart
+    name: "Drimaster Fan"
+    id: drimaster_fan
+    default_level: 3   # L1–L6 (default L3 — medium ventilation)
+
+# Optional: expose individual speed levels as buttons in HA
+# button:
+#   - platform: template
+#     name: "Drimaster Boost"
+#     on_press:
+#       - fan.turn_on:
+#           id: drimaster_fan
+#           speed: 6
