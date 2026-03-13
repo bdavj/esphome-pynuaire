@@ -67,6 +67,7 @@ class PyNuaireFan : public Component, public fan::Fan, public uart::UARTDevice {
   binary_sensor::BinarySensor *synced_sensor_{nullptr};
   int8_t last_alive_pub_{-1};   // -1=never, 0=false, 1=true
   int8_t last_synced_pub_{-1};
+  uint32_t out_of_sync_since_ms_{0};  // 0 = currently in sync
 
   // ---- Timing ----
   uint32_t pending_tx_at_ms_{0};   // millis() target for next reply (0 = none)
@@ -82,6 +83,7 @@ class PyNuaireFan : public Component, public fan::Fan, public uart::UARTDevice {
   static constexpr uint32_t RESPONSE_DELAY_MS  = 17;
   static constexpr uint32_t KEEPALIVE_MS        = 500;
   static constexpr uint32_t ALIVE_TIMEOUT_MS    = 3000;
+  static constexpr uint32_t SYNC_DEBOUNCE_MS    = 2000;
 };
 
 }  // namespace pynuaire

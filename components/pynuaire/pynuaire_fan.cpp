@@ -17,8 +17,9 @@ void PyNuaireFan::setup() {
   this->sync_count_    = 0;
   this->ctr16_         = 0x80;
   this->have_seen_rx_  = false;
-  this->last_alive_pub_  = -1;
-  this->last_synced_pub_ = -1;
+  this->last_alive_pub_       = -1;
+  this->last_synced_pub_      = -1;
+  this->out_of_sync_since_ms_ = 0;
   this->rx_buf_.reserve(RX_BUF_MAX);
 
   // Publish initial state to HA
@@ -216,12 +217,24 @@ void PyNuaireFan::handle_rx_packet_(const uint8_t *pkt) {
   }
 
   // Publish synced state: problem=true when levels don't match (device_class="problem")
+  // Debounced: only raise problem after SYNC_DEBOUNCE_MS of continuous mismatch;
+  // clear immediately when back in sync.
   if (this->synced_sensor_ != nullptr) {
-    bool problem = !this->synced_ || (this->current_level_ != this->target_level_);
-    int8_t synced_val = problem ? 1 : 0;
-    if (synced_val != this->last_synced_pub_) {
-      this->last_synced_pub_ = synced_val;
-      this->synced_sensor_->publish_state(problem);
+    bool mismatch = !this->synced_ || (this->current_level_ != this->target_level_);
+    if (!mismatch) {
+      this->out_of_sync_since_ms_ = 0;
+      if (this->last_synced_pub_ != 0) {
+        this->last_synced_pub_ = 0;
+        this->synced_sensor_->publish_state(false);
+      }
+    } else {
+      if (this->out_of_sync_since_ms_ == 0)
+        this->out_of_sync_since_ms_ = millis();
+      if (this->last_synced_pub_ != 1 &&
+          (millis() - this->out_of_sync_since_ms_) >= SYNC_DEBOUNCE_MS) {
+        this->last_synced_pub_ = 1;
+        this->synced_sensor_->publish_state(true);
+      }
     }
   }
 
