@@ -65,6 +65,8 @@ class PyNuaireFan : public Component, public fan::Fan, public uart::UARTDevice {
   // ---- Status sensors ----
   binary_sensor::BinarySensor *alive_sensor_{nullptr};
   binary_sensor::BinarySensor *synced_sensor_{nullptr};
+  int8_t last_alive_pub_{-1};   // -1=never, 0=false, 1=true
+  int8_t last_synced_pub_{-1};
 
   // ---- Timing ----
   uint32_t pending_tx_at_ms_{0};   // millis() target for next reply (0 = none)
