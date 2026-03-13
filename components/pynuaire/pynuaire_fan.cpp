@@ -17,6 +17,8 @@ void PyNuaireFan::setup() {
   this->sync_count_    = 0;
   this->ctr16_         = 0x80;
   this->have_seen_rx_  = false;
+  this->last_alive_pub_  = -1;
+  this->last_synced_pub_ = -1;
   this->rx_buf_.reserve(RX_BUF_MAX);
 
   // Publish initial state to HA
@@ -46,7 +48,11 @@ void PyNuaireFan::loop() {
   // Alive watchdog — mark dead if no RX for ALIVE_TIMEOUT_MS
   if (this->alive_sensor_ != nullptr && this->have_seen_rx_) {
     bool alive = (now - this->last_rx_ms_) < ALIVE_TIMEOUT_MS;
-    this->alive_sensor_->publish_state(alive);
+    int8_t alive_val = alive ? 1 : 0;
+    if (alive_val != this->last_alive_pub_) {
+      this->last_alive_pub_ = alive_val;
+      this->alive_sensor_->publish_state(alive);
+    }
   }
 }
 
@@ -180,9 +186,6 @@ void PyNuaireFan::handle_rx_packet_(const uint8_t *pkt) {
   this->have_seen_rx_ = true;
   this->last_rx_ms_   = millis();
 
-  if (this->alive_sensor_ != nullptr)
-    this->alive_sensor_->publish_state(true);
-
   uint8_t level_byte  = pkt[0x05];
   uint8_t b16         = pkt[0x16];
   int     motor_level = (level_byte >= 1 && level_byte <= 6) ? (int) level_byte : 0;
@@ -212,10 +215,14 @@ void PyNuaireFan::handle_rx_packet_(const uint8_t *pkt) {
     this->publish_state();
   }
 
-  // Publish synced state: true when motor is running at our target level
+  // Publish synced state: problem=true when levels don't match (device_class="problem")
   if (this->synced_sensor_ != nullptr) {
-    bool in_sync = this->synced_ && (this->current_level_ == this->target_level_);
-    this->synced_sensor_->publish_state(in_sync);
+    bool problem = !this->synced_ || (this->current_level_ != this->target_level_);
+    int8_t synced_val = problem ? 1 : 0;
+    if (synced_val != this->last_synced_pub_) {
+      this->last_synced_pub_ = synced_val;
+      this->synced_sensor_->publish_state(problem);
+    }
   }
 
   // B16 counter: motor sent N, we reply N-1
