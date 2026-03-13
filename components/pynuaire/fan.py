@@ -14,7 +14,7 @@ CONF_DEFAULT_LEVEL = "default_level"
 CONF_FAN_ALIVE = "fan_alive"
 CONF_FAN_SYNCED = "fan_synced"
 
-CONFIG_SCHEMA = fan.FAN_SCHEMA.extend(
+CONFIG_SCHEMA = fan._FAN_SCHEMA.extend(
     {
         cv.GenerateID(CONF_OUTPUT_ID): cv.declare_id(PyNuaireFan),
         cv.Optional(CONF_DEFAULT_LEVEL, default=3): cv.int_range(min=1, max=6),
