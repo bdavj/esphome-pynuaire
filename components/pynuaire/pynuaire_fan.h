@@ -3,6 +3,7 @@
 #include "esphome/core/component.h"
 #include "esphome/components/fan/fan.h"
 #include "esphome/components/uart/uart.h"
+#include "esphome/components/binary_sensor/binary_sensor.h"
 #include <vector>
 
 namespace esphome {
@@ -32,6 +33,8 @@ class PyNuaireFan : public Component, public fan::Fan, public uart::UARTDevice {
 
   // ---- Config setters (called from fan.py to_code) ----
   void set_default_level(int level) { this->default_level_ = level; }
+  void set_alive_sensor(binary_sensor::BinarySensor *s) { this->alive_sensor_ = s; }
+  void set_synced_sensor(binary_sensor::BinarySensor *s) { this->synced_sensor_ = s; }
 
  protected:
   // ---- Internal protocol helpers ----
@@ -59,9 +62,14 @@ class PyNuaireFan : public Component, public fan::Fan, public uart::UARTDevice {
   // ---- Protocol counters ----
   uint8_t  ctr16_{0x80};
 
+  // ---- Status sensors ----
+  binary_sensor::BinarySensor *alive_sensor_{nullptr};
+  binary_sensor::BinarySensor *synced_sensor_{nullptr};
+
   // ---- Timing ----
   uint32_t pending_tx_at_ms_{0};   // millis() target for next reply (0 = none)
   uint32_t last_tx_ms_{0};
+  uint32_t last_rx_ms_{0};         // for alive watchdog
   bool     have_seen_rx_{false};
 
   // ---- RX ring buffer ----
@@ -71,6 +79,7 @@ class PyNuaireFan : public Component, public fan::Fan, public uart::UARTDevice {
   // ---- Timing constants ----
   static constexpr uint32_t RESPONSE_DELAY_MS  = 17;
   static constexpr uint32_t KEEPALIVE_MS        = 500;
+  static constexpr uint32_t ALIVE_TIMEOUT_MS    = 3000;
 };
 
 }  // namespace pynuaire

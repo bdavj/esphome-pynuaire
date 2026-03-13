@@ -42,6 +42,12 @@ void PyNuaireFan::loop() {
       this->send_packet_("keepalive");
     }
   }
+
+  // Alive watchdog — mark dead if no RX for ALIVE_TIMEOUT_MS
+  if (this->alive_sensor_ != nullptr && this->have_seen_rx_) {
+    bool alive = (now - this->last_rx_ms_) < ALIVE_TIMEOUT_MS;
+    this->alive_sensor_->publish_state(alive);
+  }
 }
 
 void PyNuaireFan::dump_config() {
@@ -172,6 +178,10 @@ bool PyNuaireFan::find_next_rx_packet_(uint8_t *out_pkt_30) {
 
 void PyNuaireFan::handle_rx_packet_(const uint8_t *pkt) {
   this->have_seen_rx_ = true;
+  this->last_rx_ms_   = millis();
+
+  if (this->alive_sensor_ != nullptr)
+    this->alive_sensor_->publish_state(true);
 
   uint8_t level_byte  = pkt[0x05];
   uint8_t b16         = pkt[0x16];
@@ -200,6 +210,12 @@ void PyNuaireFan::handle_rx_packet_(const uint8_t *pkt) {
     // Update HA
     this->speed = motor_level;
     this->publish_state();
+  }
+
+  // Publish synced state: true when motor is running at our target level
+  if (this->synced_sensor_ != nullptr) {
+    bool in_sync = this->synced_ && (this->current_level_ == this->target_level_);
+    this->synced_sensor_->publish_state(in_sync);
   }
 
   // B16 counter: motor sent N, we reply N-1

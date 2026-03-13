@@ -87,6 +87,10 @@ PRs welcome for:
 - Additional ESPHome entities (runtime hours sensor, fault status, etc.)
 - Bug fixes
 
+## Disclaimer
+
+This project is not affiliated with, endorsed by, or associated with Nuaire Ltd in any way. Nuaire is a trademark of its respective owner. This is independent, community-developed software based on reverse engineering of the fan's internal protocol.
+
 ## Licence
 
 MIT
