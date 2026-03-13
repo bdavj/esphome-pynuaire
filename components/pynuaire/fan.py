@@ -16,6 +16,7 @@ CONF_FAN_SYNCED = "fan_synced"
 
 CONFIG_SCHEMA = fan._FAN_SCHEMA.extend(
     {
+        cv.GenerateID(CONF_ID): cv.declare_id(fan.Fan),
         cv.GenerateID(CONF_OUTPUT_ID): cv.declare_id(PyNuaireFan),
         cv.Optional(CONF_DEFAULT_LEVEL, default=3): cv.int_range(min=1, max=6),
         cv.Optional(CONF_FAN_ALIVE): binary_sensor.binary_sensor_schema(
