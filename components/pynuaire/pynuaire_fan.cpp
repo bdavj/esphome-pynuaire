@@ -19,6 +19,7 @@ void PyNuaireFan::setup() {
   this->have_seen_rx_  = false;
   this->last_alive_pub_       = -1;
   this->last_synced_pub_      = -1;
+  this->last_led_state_       = -1;
   this->out_of_sync_since_ms_ = 0;
   this->rx_buf_.reserve(RX_BUF_MAX);
 
@@ -47,14 +48,17 @@ void PyNuaireFan::loop() {
   }
 
   // Alive watchdog — mark dead if no RX for ALIVE_TIMEOUT_MS
-  if (this->alive_sensor_ != nullptr && this->have_seen_rx_) {
+  if (this->have_seen_rx_) {
     bool alive = (now - this->last_rx_ms_) < ALIVE_TIMEOUT_MS;
     int8_t alive_val = alive ? 1 : 0;
     if (alive_val != this->last_alive_pub_) {
       this->last_alive_pub_ = alive_val;
-      this->alive_sensor_->publish_state(alive);
+      if (this->alive_sensor_ != nullptr)
+        this->alive_sensor_->publish_state(alive);
     }
   }
+
+  this->update_status_led_();
 }
 
 void PyNuaireFan::dump_config() {
@@ -342,6 +346,33 @@ bool PyNuaireFan::verify_checksum_(const uint8_t *pkt_30) {
   uint16_t sum = 0;
   for (int i = 0; i < 30; i++) sum += pkt_30[i];
   return (sum & 0xFF) == 0;
+}
+
+// ============================================================
+// Status LED
+// ============================================================
+
+void PyNuaireFan::update_status_led_() {
+  if (this->status_led_ == nullptr)
+    return;
+
+  // Determine alive state (same logic as watchdog above)
+  bool alive = this->have_seen_rx_ && (millis() - this->last_rx_ms_) < ALIVE_TIMEOUT_MS;
+  int8_t desired = alive ? 1 : 0;
+
+  if (desired == this->last_led_state_)
+    return;
+  this->last_led_state_ = desired;
+
+  auto call = this->status_led_->make_call();
+  call.set_state(true);
+  call.set_brightness(1.0f);
+  if (alive) {
+    call.set_rgb(0.0f, 1.0f, 0.0f);  // green
+  } else {
+    call.set_rgb(1.0f, 0.0f, 0.0f);  // red
+  }
+  call.perform();
 }
 
 }  // namespace pynuaire
