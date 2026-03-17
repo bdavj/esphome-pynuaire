@@ -1,6 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import fan, uart, binary_sensor
+from esphome.components import fan, uart, binary_sensor, light
 from esphome.const import CONF_ID, CONF_OUTPUT_ID
 
 CODEOWNERS = ["@bdavj"]
@@ -13,6 +13,7 @@ PyNuaireFan = pynuaire_ns.class_("PyNuaireFan", cg.Component, fan.Fan, uart.UART
 CONF_DEFAULT_LEVEL = "default_level"
 CONF_FAN_ALIVE = "fan_alive"
 CONF_FAN_SYNCED = "fan_synced"
+CONF_STATUS_LED = "status_led"
 
 CONFIG_SCHEMA = fan._FAN_SCHEMA.extend(
     {
@@ -26,6 +27,7 @@ CONFIG_SCHEMA = fan._FAN_SCHEMA.extend(
             device_class="problem",
             icon="mdi:fan-alert",
         ),
+        cv.Optional(CONF_STATUS_LED): cv.use_id(light.LightState),
     }
 ).extend(cv.COMPONENT_SCHEMA).extend(uart.UART_DEVICE_SCHEMA)
 
@@ -44,3 +46,7 @@ async def to_code(config):
     if CONF_FAN_SYNCED in config:
         sens = await binary_sensor.new_binary_sensor(config[CONF_FAN_SYNCED])
         cg.add(var.set_synced_sensor(sens))
+
+    if CONF_STATUS_LED in config:
+        led = await cg.get_variable(config[CONF_STATUS_LED])
+        cg.add(var.set_status_led(led))

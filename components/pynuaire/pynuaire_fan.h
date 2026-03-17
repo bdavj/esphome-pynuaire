@@ -4,6 +4,7 @@
 #include "esphome/components/fan/fan.h"
 #include "esphome/components/uart/uart.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
+#include "esphome/components/light/light_state.h"
 #include <vector>
 
 namespace esphome {
@@ -35,6 +36,7 @@ class PyNuaireFan : public Component, public fan::Fan, public uart::UARTDevice {
   void set_default_level(int level) { this->default_level_ = level; }
   void set_alive_sensor(binary_sensor::BinarySensor *s) { this->alive_sensor_ = s; }
   void set_synced_sensor(binary_sensor::BinarySensor *s) { this->synced_sensor_ = s; }
+  void set_status_led(light::LightState *l) { this->status_led_ = l; }
 
  protected:
   // ---- Internal protocol helpers ----
@@ -48,6 +50,7 @@ class PyNuaireFan : public Component, public fan::Fan, public uart::UARTDevice {
   static void encode_wire_(const uint8_t *pkt_30, uint8_t *out_wire, size_t *out_len);
   static uint8_t compute_checksum_(const uint8_t *pkt_30);  // checksum of bytes 0x00–0x1C
   static bool verify_checksum_(const uint8_t *pkt_30);
+  void update_status_led_();
 
   // ---- Config ----
   int default_level_{3};
@@ -62,11 +65,13 @@ class PyNuaireFan : public Component, public fan::Fan, public uart::UARTDevice {
   // ---- Protocol counters ----
   uint8_t  ctr16_{0x80};
 
-  // ---- Status sensors ----
+  // ---- Status sensors / LED ----
   binary_sensor::BinarySensor *alive_sensor_{nullptr};
   binary_sensor::BinarySensor *synced_sensor_{nullptr};
+  light::LightState *status_led_{nullptr};
   int8_t last_alive_pub_{-1};   // -1=never, 0=false, 1=true
   int8_t last_synced_pub_{-1};
+  int8_t last_led_state_{-1};  // -1=never, 0=red, 1=green
   uint32_t out_of_sync_since_ms_{0};  // 0 = currently in sync
 
   // ---- Timing ----
